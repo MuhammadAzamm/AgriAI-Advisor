@@ -33,14 +33,17 @@ User Input → Data Processing → Weather API → AI Analysis → Output
 
 ## 📸 Screenshots
 
-### 🖥 UI
-![UI](<img width="947" height="483" alt="Project UI screeshont" src="https://github.com/user-attachments/assets/a366a306-bce5-435e-a88a-881cc99ee204" />
-)
+## 🖥 UI
+![UI Screenshot](assets/ui.png)
 
-### ⚙️ Workflow
-![Workflow](<img width="955" height="508" alt="workflow screeshot" src="https://github.com/user-attachments/assets/cee548ca-aaad-4a3a-867c-329e90fb821b" />
-)
+## ⚙️ Workflow
+![Workflow Screenshot](assets/workflow.png)
 
 ---
 
 ## 📂 Project Structure
+AgriAI-Advisor/
+├── report/        # Project documentation
+├── workflow/      # n8n workflow JSON
+├── ui/            # Frontend interface
+├── assets/        # Screenshots and media
