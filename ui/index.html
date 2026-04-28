@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>🌾 Crop AI Advisor</title>
+  <style>
+    body {
+      font-family: Arial;
+      background: #f0f8f5;
+      padding: 40px;
+      text-align: center;
+    }
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      width: 400px;
+      margin: auto;
+      box-shadow: 0px 0px 15px rgba(0,0,0,0.1);
+    }
+    input {
+      width: 90%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: green;
+      color: white;
+      padding: 12px;
+      border: none;
+      border-radius: 5px;
+      width: 95%;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover { background: darkgreen; }
+    button:disabled { background: gray; cursor: not-allowed; }
+    .result {
+      margin-top: 20px;
+      text-align: left;
+      padding: 15px;
+      background: #f9f9f9;
+      border-radius: 8px;
+    }
+    .title { color: green; }
+    .error { color: red; }
+    .success { color: green; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h2 class="title">🌾 Crop Disease Advisor</h2>
+  <input type="text" id="crop" placeholder="Enter crop (e.g. wheat)">
+  <input type="text" id="problem" placeholder="Enter problem (e.g. yellow leaves)">
+  <button id="btn" onclick="sendData()">Check Disease</button>
+  <div class="result" id="result">Result will appear here...</div>
+</div>
+
+<script>
+// ✅ CHANGE THIS URL IF YOUR n8n RUNS ON DIFFERENT PORT
+const N8N_URL = "http://localhost:5678/webhook/crop-disease";
+
+async function sendData() {
+  const crop = document.getElementById("crop").value.trim();
+  const problem = document.getElementById("problem").value.trim();
+  const btn = document.getElementById("btn");
+  const resultDiv = document.getElementById("result");
+
+  // Validate inputs
+  if (!crop || !problem) {
+    resultDiv.innerHTML = "<p class='error'>⚠️ Please enter both crop and problem!</p>";
+    return;
+  }
+
+  // Show loading
+  btn.disabled = true;
+  btn.innerText = "⏳ Analyzing...";
+  resultDiv.innerHTML = "⏳ Analyzing your crop... Please wait...";
+
+  try {
+    const res = await fetch(N8N_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json"
+      },
+      body: JSON.stringify({ crop, problem })
+    });
+
+    if (!res.ok) {
+      throw new Error(`Server error: ${res.status}`);
+    }
+
+    const data = await res.json();
+    console.log("n8n response:", data);
+
+    // Handle both array and object responses
+    const result = Array.isArray(data) ? data[0] : data;
+
+    resultDiv.innerHTML = `
+      <h3>🌾 Report</h3>
+      <p><b>🦠 Disease:</b> ${result.disease || "Not found"}</p>
+      <p><b>⚠️ Risk:</b> ${result.risk || "Not found"}</p>
+      <p><b>🔍 Cause:</b><br>${result.cause || "Not found"}</p>
+      <p><b>💊 Treatment:</b><br>${result.treatment || "Not found"}</p>
+      <p><b>🛡️ Prevention:</b><br>${result.prevention || "Not found"}</p>
+    `;
+
+  } catch (error) {
+    console.error("Error:", error);
+
+    if (error.message.includes("Failed to fetch")) {
+      resultDiv.innerHTML = `
+        <p class='error'>❌ Cannot connect to n8n!</p>
+        <p>Please check:</p>
+        <p>1️⃣ n8n is running at localhost:5678</p>
+        <p>2️⃣ Workflow is activated (toggle is ON)</p>
+        <p>3️⃣ You restarted n8n with CORS enabled</p>
+      `;
+    } else {
+      resultDiv.innerHTML = `<p class='error'>❌ Error: ${error.message}</p>`;
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Check Disease";
+  }
+}
+</script>
+</body>
+</html>

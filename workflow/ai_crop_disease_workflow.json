@@ -1,0 +1,536 @@
+{
+  "name": "AI Crop Disease and Advisory System",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crop-disease",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        -16
+      ],
+      "id": "123b60de-2c8d-4dcc-9c0c-b03689f0a302",
+      "name": "Webhook",
+      "webhookId": "8f7995ea-9529-4ba7-a33a-6c5ae0158a36"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "883df92a-6b80-4816-8b27-844813fe942d",
+              "name": "crop",
+              "value": "={{$json.body.crop}}",
+              "type": "string"
+            },
+            {
+              "id": "fcd833cd-9638-4e0f-9c8a-0d5df0150056",
+              "name": "problem",
+              "value": "={{$json.body.problem}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -16
+      ],
+      "id": "d7274b21-4f2c-4d60-ac3b-a585e29600e6",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\n// Read crop and problem from webhook\nconst crop = $json.crop || \"\";\nconst problem = $json.problem || \"\";\nconst weather = $json.weather || \"Not available\";\n\nreturn [\n  {\n    json: {\n      crop: crop,\n      problem: problem,\n      weather: weather\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        -16
+      ],
+      "id": "a2ce2496-2645-47b2-a1c6-bff150d78879",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "url": "https://api.openweathermap.org/data/2.5/weather",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "Islamabad"
+            },
+            {
+              "name": "appid",
+              "value": "ec509758cc85219293804fb331ad7cd7"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        672,
+        -16
+      ],
+      "id": "2eda5033-2965-4e35-9f64-3bc3c6884ce9",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get crop and problem from the first Code node\nconst crop = $('Code in JavaScript').first().json.crop || \"\";\nconst problem = $('Code in JavaScript').first().json.problem || \"\";\n\n// Get weather from HTTP Request output\nconst weatherData = $input.first().json;\nconst weather = weatherData?.weather?.[0]?.description || \"Not available\";\nconst temp = weatherData?.main?.temp \n  ? (weatherData.main.temp - 273.15).toFixed(1) + \"°C\" \n  : \"Not available\";\nconst humidity = weatherData?.main?.humidity \n  ? weatherData.main.humidity + \"%\" \n  : \"Not available\";\nconst city = weatherData?.name || \"Unknown\";\n\nreturn [\n  {\n    json: {\n      crop: crop,\n      problem: problem,\n      weather: weather,\n      temperature: temp,\n      humidity: humidity,\n      city: city,\n      keywords: [crop, problem, weather].filter(k => k !== \"\")\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        -16
+      ],
+      "id": "bd4340b0-d5fc-4264-acf2-6a674d888733",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6f5b1375-9e84-4206-a012-e984d278a680",
+              "name": "crop",
+              "value": "={{$('Code in JavaScript1').first().json.crop}}",
+              "type": "string"
+            },
+            {
+              "id": "7b5e894f-2f72-4db6-8abd-46d1bb9a6b96",
+              "name": "problem",
+              "value": "={{$('Code in JavaScript1').first().json.problem}}",
+              "type": "string"
+            },
+            {
+              "id": "98e8e634-49df-4d2f-8073-416c6df366b0",
+              "name": "weather",
+              "value": "={{$('Code in JavaScript1').first().json.weather}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        -16
+      ],
+      "id": "df3b872d-dd3e-465e-84dd-9f5fde4525e9",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an agricultural expert AI. Always respond ONLY in valid JSON. No extra text before or after.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Crop: {{$json.crop}}\\nProblem: {{$json.problem}}\\n\\nRespond ONLY in this JSON:\\n{\\\"cause\\\": \\\"write cause explanation here\\\"}\"\n    }\n  ],\n  \"temperature\": 0.3\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1344,
+        -112
+      ],
+      "id": "a25ef2fd-9ffd-478b-a5e6-7918bf26695b",
+      "name": "Cause Analysis AI"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an agricultural expert AI. Always respond ONLY in valid JSON format. No extra text.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Crop: {{$json.crop}}\\nProblem: {{$json.problem}}\\n\\nIdentify the disease and respond ONLY in this exact JSON format:\\n{\\\"disease\\\": \\\"disease name here\\\"}\"\n    }\n  ],\n  \"temperature\": 0.3\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1344,
+        -304
+      ],
+      "id": "c9c13163-8e2b-40a0-82b2-558589d7ae1c",
+      "name": "Disease Identification",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an agricultural expert AI. Always respond ONLY in valid JSON. No extra text before or after.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Crop: {{$json.crop}}\\nProblem: {{$json.problem}}\\n\\nRespond ONLY in this JSON:\\n{\\\"treatment\\\": \\\"write treatment steps here\\\"}\"\n    }\n  ],\n  \"temperature\": 0.3\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1344,
+        80
+      ],
+      "id": "d53ee209-dd10-4c79-8a68-f88b00cdc2d3",
+      "name": "Treatment AI"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are an agricultural expert AI. Always respond ONLY in valid JSON. No extra text before or after.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Crop: {{$json.crop}}\\nProblem: {{$json.problem}}\\n\\nRespond ONLY in this JSON:\\n{\\\"prevention\\\": \\\"write prevention steps here\\\"}\"\n    }\n  ],\n  \"temperature\": 0.3\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1344,
+        272
+      ],
+      "id": "e3f1f8a9-6255-41fc-9908-2ec837c8e712",
+      "name": "Prevention AI"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer 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"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a crop disease expert. Return ONLY valid JSON. No extra text.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Analyze crop:\\nCrop: {{$json.crop}}\\nSymptoms: {{$json.symptoms}}\\n\\nReturn ONLY this format:\\n{\\n\\\"disease\\\": \\\"\\\",\\n\\\"risk\\\": \\\"Low/Medium/High\\\",\\n\\\"cause\\\": \\\"\\\",\\n\\\"treatment\\\": \\\"\\\",\\n\\\"prevention\\\": \\\"\\\"\\n}\"\n    }\n  ],\n  \"temperature\": 0.3\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1792,
+        -112
+      ],
+      "id": "743a2d6c-eb41-4fcb-ae3e-e05e556480e9",
+      "name": "Urdu Translation AI"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nreturn [{\n  risk: Math.floor(Math.random() * 40) + 60 + \"%\"\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        80
+      ],
+      "id": "d6b4807c-47b8-4eca-be90-c86e249312e7",
+      "name": "Risk Generator"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 4,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1568,
+        -48
+      ],
+      "id": "5996c412-098b-43cf-a835-1ebb405d5bc4",
+      "name": "Final Merge"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"disease\": \"{{$json.disease}}\",\n  \"risk\": \"{{$json.risk}}\",\n  \"cause\": \"{{$json.cause}}\",\n  \"treatment\": \"{{$json.treatment}}\",\n  \"prevention\": \"{{$json.prevention}}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2240,
+        -112
+      ],
+      "id": "11c644f3-1980-4a3d-a21c-0b98420e040d",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get all 4 AI outputs directly\nconst diseaseRaw = $('Disease Identification').first().json.choices[0].message.content;\nconst causeRaw = $('Cause Analysis AI').first().json.choices[0].message.content;\nconst treatmentRaw = $('Treatment AI').first().json.choices[0].message.content;\nconst preventionRaw = $('Prevention AI').first().json.choices[0].message.content;\n\n// Parse each one\nconst disease = JSON.parse(diseaseRaw).disease || \"Unknown\";\nconst cause = JSON.parse(causeRaw).cause || \"Unknown\";\nconst treatment = JSON.parse(treatmentRaw).treatment || \"Unknown\";\nconst prevention = JSON.parse(preventionRaw).prevention || \"Unknown\";\n\nreturn [{\n  json: {\n    disease,\n    cause,\n    treatment,\n    prevention,\n    risk: \"Medium\"\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        -112
+      ],
+      "id": "6c3d5dca-4cd8-4b24-87e6-3db8711f0429",
+      "name": "Code in JavaScript2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Disease Identification",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Treatment AI",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Cause Analysis AI",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Prevention AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cause Analysis AI": {
+      "main": [
+        [
+          {
+            "node": "Final Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Disease Identification": {
+      "main": [
+        [
+          {
+            "node": "Final Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Treatment AI": {
+      "main": [
+        [
+          {
+            "node": "Final Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Prevention AI": {
+      "main": [
+        [
+          {
+            "node": "Final Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Urdu Translation AI": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Risk Generator": {
+      "main": [
+        []
+      ]
+    },
+    "Final Merge": {
+      "main": [
+        [
+          {
+            "node": "Urdu Translation AI",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Risk Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "04b77b10-d002-4894-aefa-6cf1f52c0365",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0c293baad64e908e5f68475d897dbce7297ea9e02233f70a433769a9aa54c446"
+  },
+  "id": "J5hb5xqbxREAdhMC",
+  "tags": []
+}
